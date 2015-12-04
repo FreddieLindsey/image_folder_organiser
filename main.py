@@ -1,4 +1,6 @@
+#!/usr/bin/env python
+
 import os, sys
-import Image
+from PIL import Image
 
 jpgfile = Image.open(sys.argv[1])
