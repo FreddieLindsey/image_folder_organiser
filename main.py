@@ -11,6 +11,7 @@ from PIL import Image
 
 raw_exts = ['.arw', '.cr2']
 duplicate_exts = raw_exts + ['.jpg']
+duplicate_consider = duplicate_exts + [ '.tif', '.tiff' ]
 
 corrupt_file = '_corrupt_file'
 dng_found_or_created = '_dng_found_or_created'
@@ -98,7 +99,7 @@ def removeIfDNGPresent(folder_in, file_list, folder_out = ''):
                 print "Error moving {0} to {1}".format(filename, new_file)
 
 def duplicateHunter(file_list):
-    for i in file_list:
+    for i in [file_ for file_ in file_list if os.path.splitext(file_)[1] in duplicate_consider]:
         filename, _ = os.path.splitext(i)
         similar_files = [file_ for file_ in file_list if filename in file_]
         for j in similar_files:
