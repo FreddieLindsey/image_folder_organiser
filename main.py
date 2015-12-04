@@ -4,6 +4,12 @@ import os, sys
 from PIL import Image
 
 ####################################
+############ CONSTANTS #############
+####################################
+
+raw_exts = ['.arw', '.cr2']
+
+####################################
 ############ FUNCTIONS #############
 ####################################
 
@@ -23,11 +29,28 @@ def createDirectory(file_path):
     if not os.path.exists(file_path):
         os.mkdir(file_path)
 
+def doesDNGExist(file_path):
+    for i in raw_exts:
+        dng_path = file_path.replace(i, '.dng')
+        if os.path.exists(dng_path):
+            return True # os.path.getsize(dng_path) > os.path.getsize(file_path)
+    return False
+
 def moveDuplicates(folder_in, folder_out):
     if not os.path.exists(folder_in):
         print 'Folder to process does not exist, where is {0}?'.format(folder_in)
         exit(1)
     createDirectory(folder_out)
+    for root, dirnames, filenames in os.walk(folder_in):
+        for filename in filenames:
+            if folder_out in os.path.join(root, filename) or '.DS_Store' in filename or '.dng' in filename:
+                continue
+            filename_joined = os.path.join(root, filename)
+            if doesDNGExist(filename_joined):
+                try:
+                    os.rename(filename_joined, filename_joined.replace(folder_in, folder_out))
+                except Exception:
+                    print "Error processing {0}".format(filename_joined)
 
 ####################################
 ############ MAIN ##################
