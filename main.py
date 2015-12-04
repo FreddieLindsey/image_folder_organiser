@@ -10,7 +10,7 @@ from PIL import Image
 ####################################
 
 raw_exts = ['.arw', '.cr2']
-duplicate_exts = ['.jpg']
+duplicate_exts = raw_exts + ['.jpg']
 
 corrupt_file = '_corrupt_file'
 dng_found_or_created = '_dng_found_or_created'
@@ -36,9 +36,16 @@ def createDirectory(file_path):
     if not os.path.exists(file_path):
         os.mkdir(file_path)
 
-def doesDNGExist(file_path):
+def doesDNGExistRAW(file_path):
     dng_path = file_path
     for i in raw_exts:
+        insensitive_replace = re.compile(re.escape(i), re.IGNORECASE)
+        dng_path = insensitive_replace.sub('.dng', dng_path)
+    return file_path != dng_path and os.path.exists(dng_path)
+
+def doesDNGExist(file_path):
+    dng_path = file_path
+    for i in duplicate_exts:
         insensitive_replace = re.compile(re.escape(i), re.IGNORECASE)
         dng_path = insensitive_replace.sub('.dng', dng_path)
     return file_path != dng_path and os.path.exists(dng_path)
@@ -51,6 +58,7 @@ def getFileList(folder_in):
             for i in do_not_visit:
                 if i in os.path.join(root, filename):
                     add = False # Ignores processed directories
+                    break
             if '.DS_Store' in filename or '.dng' in filename:
                 add = False
             if add: files_to_check.append(os.path.join(root, filename))
@@ -58,7 +66,7 @@ def getFileList(folder_in):
 
 def convertNotDNGToDNG(file_list):
     for i in file_list:
-        if not doesDNGExist(i) and '.{0}'.format(i.split('.')[-1]) in raw_exts:
+        if not doesDNGExistRAW(i) and '.{0}'.format(i.split('.')[-1]) in raw_exts:
             system_command = 'adobe_dng -c -fl'.split()
             system_command.append(i)
             process = subprocess.Popen(system_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
