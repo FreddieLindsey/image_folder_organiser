@@ -59,13 +59,14 @@ def getFileList(folder_in):
                 if i in os.path.join(root, filename):
                     add = False # Ignores processed directories
                     break
-            if '.DS_Store' in filename or '.dng' in filename:
+            if '.DS_Store' in filename:
                 add = False
             if add: files_to_check.append(os.path.join(root, filename))
     return files_to_check
 
 def convertNotDNGToDNG(file_list):
     for i in file_list:
+        if '.dng' in i: continue
         if not doesDNGExistRAW(i) and '.{0}'.format(i.split('.')[-1]) in raw_exts:
             system_command = 'adobe_dng -c -fl'.split()
             system_command.append(i)
@@ -95,6 +96,15 @@ def removeIfDNGPresent(folder_in, file_list, folder_out = ''):
             except Exception:
                 print "Error moving {0} to {1}".format(filename, new_file)
 
+def duplicateHunter(file_list):
+    for i in file_list:
+        filename, _ = os.path.splitext(i)
+        similar_files = [file_ for file_ in file_list if filename in file_]
+        for j in similar_files:
+            if (i == j): continue
+            if os.path.getsize(i) == os.path.getsize(j):
+                print "I think that \n1:\t{0}\n2:\t{1}\nare the same?\n\n".format(i, j)
+
 ####################################
 ############ MAIN ##################
 ####################################
@@ -112,3 +122,5 @@ if not os.path.exists(folder_in):
 file_list = getFileList(folder_in)
 convertNotDNGToDNG(file_list)
 removeIfDNGPresent(folder_in, file_list)
+dng_file_list = [file_ for file_ in file_list if '.dng' in file_]
+duplicateHunter(dng_file_list)
