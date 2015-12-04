@@ -14,7 +14,8 @@ duplicate_exts = raw_exts + ['.jpg']
 
 corrupt_file = '_corrupt_file'
 dng_found_or_created = '_dng_found_or_created'
-do_not_visit = [ corrupt_file, dng_found_or_created ]
+duplicated_file = '_duplicate_file'
+do_not_visit = [ corrupt_file, dng_found_or_created, duplicated_file ]
 
 ####################################
 ############ FUNCTIONS #############
@@ -103,7 +104,18 @@ def duplicateHunter(file_list):
         for j in similar_files:
             if (i == j): continue
             if os.path.getsize(i) == os.path.getsize(j):
-                print "I think that \n1:\t{0}\n2:\t{1}\nare the same?\n\n".format(i, j)
+                file_list.remove(j)
+                new_file = i.split('/')
+                filename = new_file[-1]
+                new_file = new_file[:-1]
+                new_file.append('{0}/{1}'.format(duplicated_file, filename))
+                new_file = '/'.join(new_file)
+                makeFileDirectory(new_file)
+                try:
+                    os.rename(j, new_file)
+                except Exception:
+                    print "Error moving {0} to {1}".format(i, new_file)
+
 
 ####################################
 ############ MAIN ##################
