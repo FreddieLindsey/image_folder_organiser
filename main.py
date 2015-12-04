@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import os, sys
+import re
+import subprocess
 from PIL import Image
 
 ####################################
@@ -8,6 +10,11 @@ from PIL import Image
 ####################################
 
 raw_exts = ['.arw', '.cr2']
+duplicate_exts = ['.jpg']
+
+corrupt_file = '_corrupt_file'
+dng_found_or_created = '_dng_found_or_created'
+do_not_visit = [ corrupt_file, dng_found_or_created ]
 
 ####################################
 ############ FUNCTIONS #############
@@ -30,27 +37,55 @@ def createDirectory(file_path):
         os.mkdir(file_path)
 
 def doesDNGExist(file_path):
+    dng_path = file_path
     for i in raw_exts:
-        dng_path = file_path.replace(i, '.dng')
-        if os.path.exists(dng_path):
-            return True # os.path.getsize(dng_path) > os.path.getsize(file_path)
-    return False
+        insensitive_replace = re.compile(re.escape(i), re.IGNORECASE)
+        dng_path = insensitive_replace.sub('.dng', dng_path)
+    return file_path != dng_path and os.path.exists(dng_path)
 
-def moveDuplicates(folder_in, folder_out):
-    if not os.path.exists(folder_in):
-        print 'Folder to process does not exist, where is {0}?'.format(folder_in)
-        exit(1)
-    createDirectory(folder_out)
+def getFileList(folder_in):
+    files_to_check = []
     for root, dirnames, filenames in os.walk(folder_in):
         for filename in filenames:
-            if folder_out in os.path.join(root, filename) or '.DS_Store' in filename or '.dng' in filename:
-                continue
-            filename_joined = os.path.join(root, filename)
-            if doesDNGExist(filename_joined):
+            add = True
+            for i in do_not_visit:
+                if i in os.path.join(root, filename):
+                    add = False # Ignores processed directories
+            if '.DS_Store' in filename or '.dng' in filename:
+                add = False
+            if add: files_to_check.append(os.path.join(root, filename))
+    return files_to_check
+
+def convertNotDNGToDNG(file_list):
+    for i in file_list:
+        if not doesDNGExist(i) and '.{0}'.format(i.split('.')[-1]) in raw_exts:
+            system_command = 'adobe_dng -c -fl'.split()
+            system_command.append(i)
+            process = subprocess.Popen(system_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if (process.communicate()[1] != ''):
+                new_file = i.split('/')
+                filename = new_file[-1]
+                new_file = new_file[:-1]
+                new_file.append('{0}/{1}'.format(corrupt_file, filename))
+                new_file = '/'.join(new_file)
+                makeFileDirectory(new_file)
                 try:
-                    os.rename(filename_joined, filename_joined.replace(folder_in, folder_out))
+                    os.rename(i, new_file)
                 except Exception:
-                    print "Error processing {0}".format(filename_joined)
+                    print "Error moving {0} to {1}".format(i, new_file)
+
+def removeIfDNGPresent(folder_in, file_list, folder_out = ''):
+    if (folder_out == ''):
+        folder_out = '{0}/{1}'.format(folder_in, dng_found_or_created)
+    for filename in file_list:
+        dng_exists = doesDNGExist(filename)
+        if dng_exists:
+            new_file = filename.replace(folder_in, folder_out)
+            makeFileDirectory(new_file)
+            try:
+                os.rename(filename, new_file)
+            except Exception:
+                print "Error moving {0} to {1}".format(filename, new_file)
 
 ####################################
 ############ MAIN ##################
@@ -58,6 +93,14 @@ def moveDuplicates(folder_in, folder_out):
 
 if (len(sys.argv) != 2):
     print 'Usage: ./main.py <folder to process>'
-    exit(1)
+    exit(10)
 
-moveDuplicates(sys.argv[1], '{0}/_images_to_delete'.format(sys.argv[1]))
+folder_in = sys.argv[1]
+
+if not os.path.exists(folder_in):
+    print 'Folder to process does not exist, where is {0}?'.format(folder_in)
+    exit(11)
+
+file_list = getFileList(folder_in)
+convertNotDNGToDNG(file_list)
+removeIfDNGPresent(folder_in, file_list)
