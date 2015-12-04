@@ -134,5 +134,4 @@ if not os.path.exists(folder_in):
 file_list = getFileList(folder_in)
 convertNotDNGToDNG(file_list)
 removeIfDNGPresent(folder_in, file_list)
-dng_file_list = [file_ for file_ in file_list if '.dng' in file_]
-duplicateHunter(dng_file_list)
+duplicateHunter(getFileList(folder_in))
